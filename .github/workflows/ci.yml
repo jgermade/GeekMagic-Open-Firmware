@@ -117,7 +117,7 @@ jobs:
       - name: Run semantic-release
         env:
           GITHUB_TOKEN: ${{ github.token }}
-        run: semantic-release
+        run: semantic-release --branches ${{ github.ref_name }}
 
   devcontainer:
     name: Build and push devcontainer image
