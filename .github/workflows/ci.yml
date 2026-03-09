@@ -114,12 +114,14 @@ jobs:
       - name: Install semantic-release and plugins
         run: npm install -g semantic-release @semantic-release/changelog @semantic-release/git @semantic-release/github
 
-      - name: Get tag related branch name
+      - name: Get tag related branch name and set it as output
         run: |
           raw=$(git branch -r --contains ${{ github.ref }})
           branch=$(echo ${raw##*/} | tr [:upper:] [:lower:])
           echo "branch=$branch" >> $GITHUB_OUTPUT
-          echo "Branch is $branch."
+          echo "Branch is $branch.
+          echo "GITHUB_BASE_REF: $GITHUB_BASE_REF"
+          echo "GITHUB_REF_NAME: $GITHUB_REF_NAME"
 
       - name: Run semantic-release
         env:
