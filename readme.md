@@ -25,6 +25,7 @@
     - [Color format](#color-format)
 - [What's next ?](#whats-next)
 - [The firmware](#plateformio-firmware)
+- [Continuation](#continuation)
 - [Install guide](#installation-guide)
 - [License](#license)
 - [Support](#support)
@@ -234,6 +235,26 @@ This is the "real" firmware I want to improve, with clean and reliable code
 | Filesystem        | LittleFS                                                                 | Local storage LittleFS                  |
 | Graphics display  | Arduino_GFX Library                                                      | ST7789 display management (SPI, RGB565) |
 | Web UI (frontend) | [Pico.css](https://picocss.com/docs), [Alpine.js](https://alpinejs.dev/) | Minimalist web user interface           |
+
+## Continuation
+
+If you want to continue development on another computer, use the project plan in:
+
+- [PLAN_IMPLEMENTACION.md](PLAN_IMPLEMENTACION.md)
+
+This file tracks:
+
+- Current implementation status
+- Remaining phases and verification checklist
+- Quick setup/build steps to resume work fast
+
+Quick resume commands:
+
+```bash
+python3 -m venv .venv
+.venv/bin/python -m pip install platformio
+.venv/bin/python -m platformio run -e esp12e
+```
 
 ## Installation Guide
 

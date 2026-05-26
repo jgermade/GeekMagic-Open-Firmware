@@ -1,174 +1,111 @@
-// SPDX-License-Identifier: GPL-3.0-or-later
-/*
- * GeekMagic Open Firmware
- * Copyright (C) 2026 Times-Z
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
- */
-
-#include <ArduinoJson.h>
-#include <Logger.h>
-
 #include "wireless/WiFiManager.h"
-#include "display/DisplayManager.h"
 
-static constexpr int LOADING_BAR_TEXT_X = 20;
-static constexpr int LOADING_BAR_TEXT_Y = 60;
-static constexpr int LOADING_BAR_Y = 110;
-static constexpr int LOADING_DELAY_MS = 1000;
+namespace {
+constexpr uint32_t kInitialConnectTimeoutMs = 15000;
+constexpr byte kDnsPort = 53;
+constexpr const char* kDnsWildcard = "*";
+}  // namespace
 
-/**
- * @brief Maximum number of attempts to connect to a wifi network
- */
-static constexpr int MAX_CONNECTION_ATTEMPTS = 20;
+WiFiManager::WiFiManager() : apSsid_("GeekMagic-" + String(ESP.getChipId(), HEX)), state_(State::Boot) {}
 
-/**
- * @brief Delay in milliseconds between wifi connection attempts
- */
-static constexpr uint32_t CONNECTION_DELAY_MS = 500;
+void WiFiManager::begin(const String& staSsid, const String& staPassword) {
+  staSsid_ = staSsid;
+  staPassword_ = staPassword;
 
-/**
- * @brief WifiManager constructor
- *
- * @param staSsid The SSID for the WiFi station mode
- * @param staPass The password for the WiFi station mode
- * @param apSsid The SSID for the WiFi access point mode
- * @param apPass The password for the WiFi access point mode
- */
-WiFiManager::WiFiManager(const char* staSsid, const char* staPass, const char* apSsid, const char* apPass)
-    : _staSsid(staSsid), _staPass(staPass), _apSsid(apSsid), _apPass(apPass) {}
+  if (staSsid_.isEmpty()) {
+    startCaptivePortal();
+    return;
+  }
 
-auto WiFiManager::begin() -> void {
-    if (!startStationMode()) {
-        startAccessPointMode();
-    }
-
-    Logger::info("Wifi active", "WiFiManager");
-    Logger::info(String("Mode : " + String(_apMode ? "AP" : "STA")).c_str(), "WiFiManager");
-    Logger::info(String("SSID : " + String(_apMode ? _apSsid : _staSsid)).c_str(), "WiFiManager");
-    Logger::info(String("IP   : " + getIP().toString()).c_str(), "WiFiManager");
+  if (!connectStation(kInitialConnectTimeoutMs)) {
+    startCaptivePortal();
+  }
 }
 
-/**
- * @brief Attempts to connect the device to a WiFi network in station mode
- *
- * @return true if the device successfully connects to the WiFi network false otherwise
- */
-auto WiFiManager::startStationMode() -> bool {
-    WiFi.mode(WIFI_STA);
-    WiFi.begin(_staSsid, _staPass);
-    int attempts = 0;
-
-    Logger::info("Connecting to WiFi...", "WiFiManager");
-
-    while (WiFi.status() != WL_CONNECTED && attempts < MAX_CONNECTION_ATTEMPTS) {
-        delay(CONNECTION_DELAY_MS);
-        attempts++;
-    }
-
-    if (WiFi.status() == WL_CONNECTED) {
-        _apMode = false;
-        return true;
-    }
-
-    return false;
+void WiFiManager::update() {
+  if (state_ == State::StaConnected && WiFi.status() != WL_CONNECTED) {
+    startCaptivePortal();
+  }
 }
 
-void WiFiManager::scanNetworks(JsonArray& out) {
-    Logger::info("Scanning WiFi networks...", "WiFiManager");
-
-    int8_t networks = WiFi.scanNetworks();
-
-    Logger::info(String("Found networks: " + String(networks)).c_str(), "WiFiManager");
-
-    for (int i = 0; i < networks; ++i) {
-        JsonObject obj = out.add<JsonObject>();
-
-        auto rssiVal = static_cast<int>(WiFi.RSSI(i));
-
-        obj["ssid"] = WiFi.SSID(i);                             // NOLINT(readability-misplaced-array-index)
-        obj["rssi"] = rssiVal;                                  // NOLINT(readability-misplaced-array-index)
-        obj["enc"] = static_cast<int>(WiFi.encryptionType(i));  // NOLINT(readability-misplaced-array-index)
-    }
+void WiFiManager::processDns() {
+  if (state_ == State::ApPortal) {
+    dnsServer_.processNextRequest();
+  }
 }
 
-auto WiFiManager::connectToNetwork(const char* ssid, const char* pass, uint32_t timeoutMs) -> bool {
-    Logger::info(String("Connecting to " + String(ssid)).c_str(), "WiFiManager");
+bool WiFiManager::connectToNetwork(const String& ssid, const String& password, uint32_t timeoutMs) {
+  staSsid_ = ssid;
+  staPassword_ = password;
 
-    constexpr int total_steps = 2;
-    int step = 0;
-
-    DisplayManager::clearScreen();
-    DisplayManager::drawTextWrapped(LOADING_BAR_TEXT_X, LOADING_BAR_TEXT_Y, "Wifi connecting...", 2, LCD_WHITE,
-                                    LCD_BLACK, true);
-    DisplayManager::drawLoadingBar(static_cast<float>(step) / static_cast<float>(total_steps), LOADING_BAR_Y);
-
-    WiFi.mode(WIFI_STA);
-    WiFi.begin(ssid, pass);
-
-    uint32_t start = millis();
-
-    while (WiFi.status() != WL_CONNECTED && (millis() - start) < timeoutMs) {
-        delay(CONNECTION_DELAY_MS);
-        DisplayManager::drawLoadingBar(static_cast<float>(step) / static_cast<float>(total_steps), LOADING_BAR_Y);
-    }
-
-    step++;
-
-    if (WiFi.status() == WL_CONNECTED) {
-        _apMode = false;
-
-        Logger::info(String("Connected: " + WiFi.localIP().toString()).c_str(), "WiFiManager");
-        DisplayManager::drawTextWrapped(LOADING_BAR_TEXT_X, LOADING_BAR_TEXT_Y, "Connected !", 2, LCD_WHITE, LCD_BLACK,
-                                        true);
-        DisplayManager::drawTextWrapped(LOADING_BAR_TEXT_X, LOADING_BAR_TEXT_Y + ONE_LINE_SPACE,
-                                        "IP: " + WiFi.localIP().toString(), 2, LCD_WHITE, LCD_BLACK, true);
-
-        DisplayManager::drawLoadingBar(1.0F, LOADING_BAR_Y);
-
-        return true;
-    }
-
-    DisplayManager::drawTextWrapped(LOADING_BAR_TEXT_X, LOADING_BAR_TEXT_Y, "Failed to connect!", 2, LCD_WHITE,
-                                    LCD_BLACK, true);
-    Logger::warn("Failed to connect to WiFi", "WiFiManager");
-
-    DisplayManager::drawLoadingBar(1.0F, LOADING_BAR_Y);
-
-    startAccessPointMode();
-
-    return false;
-}
-
-auto WiFiManager::isConnected() -> bool { return WiFi.status() == WL_CONNECTED; }
-
-auto WiFiManager::getConnectedSSID() -> String { return WiFi.SSID(); }
-
-/**
- * @brief Starts the WiFi Access Point (AP) mode
- *
- * @return true Always returns true to indicate the AP mode was started
- */
-auto WiFiManager::startAccessPointMode() -> bool {
-    WiFi.mode(WIFI_AP);
-    WiFi.softAP(_apSsid, _apPass);
-
-    _apMode = true;
-
+  stopCaptivePortal();
+  if (connectStation(timeoutMs)) {
     return true;
+  }
+
+  startCaptivePortal();
+  return false;
 }
 
-auto WiFiManager::isApMode() const -> bool { return _apMode; }
+void WiFiManager::scanNetworks(JsonArray& output) {
+  const int count = WiFi.scanNetworks();
+  for (int i = 0; i < count; ++i) {
+    JsonObject network = output.add<JsonObject>();
+    network["ssid"] = WiFi.SSID(i);
+    network["rssi"] = WiFi.RSSI(i);
+    network["enc"] = static_cast<int>(WiFi.encryptionType(i));
+  }
+  WiFi.scanDelete();
+}
 
-auto WiFiManager::getIP() const -> IPAddress { return _apMode ? WiFi.softAPIP() : WiFi.localIP(); }
+bool WiFiManager::isApMode() const { return state_ == State::ApPortal; }
+
+WiFiManager::State WiFiManager::state() const { return state_; }
+
+String WiFiManager::activeSsid() const {
+  return isApMode() ? apSsid_ : WiFi.SSID();
+}
+
+IPAddress WiFiManager::ip() const {
+  return isApMode() ? WiFi.softAPIP() : WiFi.localIP();
+}
+
+String WiFiManager::apSsid() const { return apSsid_; }
+
+bool WiFiManager::connectStation(uint32_t timeoutMs) {
+  state_ = State::StaConnecting;
+
+  WiFi.persistent(false);
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(staSsid_.c_str(), staPassword_.c_str());
+
+  const uint32_t start = millis();
+  while (WiFi.status() != WL_CONNECTED && (millis() - start) < timeoutMs) {
+    delay(150);
+    yield();
+  }
+
+  if (WiFi.status() == WL_CONNECTED) {
+    state_ = State::StaConnected;
+    return true;
+  }
+
+  return false;
+}
+
+void WiFiManager::startCaptivePortal() {
+  WiFi.disconnect();
+  WiFi.mode(WIFI_AP);
+  WiFi.softAP(apSsid_.c_str());
+
+  dnsServer_.stop();
+  dnsServer_.setErrorReplyCode(DNSReplyCode::NoError);
+  dnsServer_.start(kDnsPort, kDnsWildcard, WiFi.softAPIP());
+
+  state_ = State::ApPortal;
+}
+
+void WiFiManager::stopCaptivePortal() {
+  dnsServer_.stop();
+  WiFi.softAPdisconnect(true);
+}

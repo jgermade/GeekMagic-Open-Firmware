@@ -40,6 +40,7 @@ idf.py*
 !backup/**/*.bin
 
 .pio/
+.venv/
 include/project_version.h
 .vscode/c_cpp_properties.json
 .vscode/launch.json
