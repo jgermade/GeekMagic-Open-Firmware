@@ -6,9 +6,9 @@
 
 namespace {
 String toJson(const JsonDocument& doc) {
-  String out;
-  serializeJson(doc, out);
-  return out;
+    String out;
+    serializeJson(doc, out);
+    return out;
 }
 
 const char kPortalHtml[] PROGMEM = R"HTML(
@@ -78,81 +78,81 @@ document.getElementById('save').addEventListener('click', async () => {
 void sendPortal(ESP8266WebServer& server) { server.send_P(200, "text/html", kPortalHtml); }
 
 bool isCaptivePath(const String& path) {
-  return path == "/" || path == "/generate_204" || path == "/hotspot-detect.html" || path == "/fwlink";
+    return path == "/" || path == "/generate_204" || path == "/hotspot-detect.html" || path == "/fwlink";
 }
 }  // namespace
 
 void registerRoutes(ESP8266WebServer& server, ConfigManager& config, WiFiManager& wifiManager, OtaManager& otaManager) {
-  server.collectHeaders("Authorization");
+    server.collectHeaders("Authorization");
 
-  otaManager.registerApi(server, config);
+    otaManager.registerApi(server, config);
 
-  server.on("/api/v1/wifi/status", HTTP_GET, [&server, &wifiManager]() {
-    JsonDocument doc;
-    const bool connected = !wifiManager.isApMode() && WiFi.status() == WL_CONNECTED;
+    server.on("/api/v1/wifi/status", HTTP_GET, [&server, &wifiManager]() {
+        JsonDocument doc;
+        const bool connected = !wifiManager.isApMode() && WiFi.status() == WL_CONNECTED;
 
-    doc["connected"] = connected;
-    doc["apMode"] = wifiManager.isApMode();
-    doc["ssid"] = wifiManager.activeSsid();
-    doc["ip"] = wifiManager.ip().toString();
+        doc["connected"] = connected;
+        doc["apMode"] = wifiManager.isApMode();
+        doc["ssid"] = wifiManager.activeSsid();
+        doc["ip"] = wifiManager.ip().toString();
 
-    server.send(200, "application/json", toJson(doc));
-  });
+        server.send(200, "application/json", toJson(doc));
+    });
 
-  server.on("/api/v1/wifi/scan", HTTP_GET, [&server, &wifiManager]() {
-    JsonDocument doc;
-    JsonArray networks = doc["networks"].to<JsonArray>();
-    wifiManager.scanNetworks(networks);
-    server.send(200, "application/json", toJson(doc));
-  });
+    server.on("/api/v1/wifi/scan", HTTP_GET, [&server, &wifiManager]() {
+        JsonDocument doc;
+        JsonArray networks = doc["networks"].to<JsonArray>();
+        wifiManager.scanNetworks(networks);
+        server.send(200, "application/json", toJson(doc));
+    });
 
-  server.on("/api/v1/wifi/connect", HTTP_POST, [&server, &wifiManager, &config]() {
-    JsonDocument input;
-    const DeserializationError err = deserializeJson(input, server.arg("plain"));
-    if (err) {
-      server.send(400, "application/json", "{\"error\":\"invalid-json\"}");
-      return;
-    }
+    server.on("/api/v1/wifi/connect", HTTP_POST, [&server, &wifiManager, &config]() {
+        JsonDocument input;
+        const DeserializationError err = deserializeJson(input, server.arg("plain"));
+        if (err) {
+            server.send(400, "application/json", "{\"error\":\"invalid-json\"}");
+            return;
+        }
 
-    const String ssid = input["ssid"] | "";
-    const String password = input["password"] | "";
+        const String ssid = input["ssid"] | "";
+        const String password = input["password"] | "";
 
-    if (ssid.isEmpty()) {
-      server.send(400, "application/json", "{\"error\":\"ssid-required\"}");
-      return;
-    }
+        if (ssid.isEmpty()) {
+            server.send(400, "application/json", "{\"error\":\"ssid-required\"}");
+            return;
+        }
 
-    DisplayManager::showMessage("WiFi", "Connecting...");
-    const bool ok = wifiManager.connectToNetwork(ssid, password, 20000);
+        DisplayManager::showMessage("WiFi", "Connecting...");
+        const bool ok = wifiManager.connectToNetwork(ssid, password, 20000);
 
-    JsonDocument doc;
-    doc["status"] = ok ? "connected" : "error";
-    doc["ssid"] = ssid;
-    if (ok) {
-      config.setWiFi(ssid, password);
-      config.save();
-      doc["ip"] = wifiManager.ip().toString();
-      DisplayManager::showNetworkStatus(false, wifiManager.activeSsid(), wifiManager.ip().toString());
-    } else {
-      doc["message"] = "failed-to-connect";
-      DisplayManager::showNetworkStatus(true, wifiManager.activeSsid(), wifiManager.ip().toString());
-    }
+        JsonDocument doc;
+        doc["status"] = ok ? "connected" : "error";
+        doc["ssid"] = ssid;
+        if (ok) {
+            config.setWiFi(ssid, password);
+            config.save();
+            doc["ip"] = wifiManager.ip().toString();
+            DisplayManager::showNetworkStatus(false, wifiManager.activeSsid(), wifiManager.ip().toString());
+        } else {
+            doc["message"] = "failed-to-connect";
+            DisplayManager::showNetworkStatus(true, wifiManager.activeSsid(), wifiManager.ip().toString());
+        }
 
-    server.send(ok ? 200 : 500, "application/json", toJson(doc));
-  });
+        server.send(ok ? 200 : 500, "application/json", toJson(doc));
+    });
 
-  server.on("/", HTTP_GET, [&server]() { sendPortal(server); });
-  server.on("/generate_204", HTTP_GET, [&server]() { sendPortal(server); });
-  server.on("/hotspot-detect.html", HTTP_GET, [&server]() { sendPortal(server); });
-  server.on("/fwlink", HTTP_GET, [&server]() { sendPortal(server); });
+    server.on("/", HTTP_GET, [&server]() { sendPortal(server); });
+    server.on("/generate_204", HTTP_GET, [&server]() { sendPortal(server); });
+    server.on("/hotspot-detect.html", HTTP_GET, [&server]() { sendPortal(server); });
+    server.on("/fwlink", HTTP_GET, [&server]() { sendPortal(server); });
 
-  server.onNotFound([&server, &wifiManager]() {
-    if (wifiManager.isApMode() && !isCaptivePath(server.uri())) {
-      server.sendHeader("Location", String("http://") + wifiManager.ip().toString() + "/", true);
-      server.send(302, "text/plain", "");
-      return;
-    }
+    server.onNotFound([&server, &wifiManager]() {
+        if (wifiManager.isApMode() && !isCaptivePath(server.uri())) {
+            server.sendHeader("Location", String("http://") + wifiManager.ip().toString() + "/", true);
+            server.send(302, "text/plain", "");
+            return;
+        }
 
-    server.send(404, "application/json", "{\"error\":\"not-found\"}");
-  });
+        server.send(404, "application/json", "{\"error\":\"not-found\"}");
+    });
 }

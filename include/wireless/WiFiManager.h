@@ -6,38 +6,38 @@
 #include <ESP8266WiFi.h>
 
 class WiFiManager {
- public:
-  enum class State {
-    Boot,
-    StaConnecting,
-    StaConnected,
-    ApPortal,
-  };
+   public:
+    enum class State {
+        Boot,
+        StaConnecting,
+        StaConnected,
+        ApPortal,
+    };
 
-  WiFiManager();
+    WiFiManager();
 
-  void begin(const String& staSsid, const String& staPassword);
-  void update();
-  void processDns();
+    void begin(const String& staSsid, const String& staPassword);
+    void update();
+    void processDns();
 
-  bool connectToNetwork(const String& ssid, const String& password, uint32_t timeoutMs);
-  void scanNetworks(JsonArray& output);
+    bool connectToNetwork(const String& ssid, const String& password, uint32_t timeoutMs);
+    void scanNetworks(JsonArray& output);
 
-  bool isApMode() const;
-  State state() const;
-  String activeSsid() const;
-  IPAddress ip() const;
-  String apSsid() const;
+    bool isApMode() const;
+    State state() const;
+    String activeSsid() const;
+    IPAddress ip() const;
+    String apSsid() const;
 
- private:
-  bool connectStation(uint32_t timeoutMs);
-  void startCaptivePortal();
-  void stopCaptivePortal();
+   private:
+    bool connectStation(uint32_t timeoutMs);
+    void startCaptivePortal();
+    void stopCaptivePortal();
 
-  String staSsid_;
-  String staPassword_;
-  String apSsid_;
+    String staSsid_;
+    String staPassword_;
+    String apSsid_;
 
-  DNSServer dnsServer_;
-  State state_;
+    DNSServer dnsServer_;
+    State state_;
 };

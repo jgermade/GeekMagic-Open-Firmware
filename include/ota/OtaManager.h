@@ -7,34 +7,34 @@
 #include "config/ConfigManager.h"
 
 class OtaManager {
- public:
-  OtaManager();
+   public:
+    OtaManager();
 
-  void attachLegacy(ESP8266WebServer& server, const String& path = "/legacyupdate");
-  void registerApi(ESP8266WebServer& server, const ConfigManager& config);
-  void loop();
+    void attachLegacy(ESP8266WebServer& server, const String& path = "/legacyupdate");
+    void registerApi(ESP8266WebServer& server, const ConfigManager& config);
+    void loop();
 
-  bool inProgress() const;
-  bool hasError() const;
-  const String& status() const;
+    bool inProgress() const;
+    bool hasError() const;
+    const String& status() const;
 
- private:
-  void handleUploadStart(HTTPUpload& upload);
-  void handleUploadWrite(HTTPUpload& upload);
-  void handleUploadEnd();
-  void handleUploadAbort();
+   private:
+    void handleUploadStart(HTTPUpload& upload);
+    void handleUploadWrite(HTTPUpload& upload);
+    void handleUploadEnd();
+    void handleUploadAbort();
 
-  bool isAuthorized(ESP8266WebServer& server, const ConfigManager& config) const;
+    bool isAuthorized(ESP8266WebServer& server, const ConfigManager& config) const;
 
-  ESP8266HTTPUpdateServer legacyUpdater_;
+    ESP8266HTTPUpdateServer legacyUpdater_;
 
-  bool inProgress_;
-  bool error_;
-  bool cancelRequested_;
-  size_t written_;
-  size_t total_;
-  String status_;
+    bool inProgress_;
+    bool error_;
+    bool cancelRequested_;
+    size_t written_;
+    size_t total_;
+    String status_;
 
-  bool rebootScheduled_;
-  uint32_t rebootAtMs_;
+    bool rebootScheduled_;
+    uint32_t rebootAtMs_;
 };

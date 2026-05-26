@@ -20,52 +20,52 @@ OtaManager gOta;
 ESP8266WebServer gWebServer(80);
 
 void showCurrentNetworkOnDisplay() {
-  DisplayManager::showNetworkStatus(gWifi.isApMode(), gWifi.activeSsid(), gWifi.ip().toString());
+    DisplayManager::showNetworkStatus(gWifi.isApMode(), gWifi.activeSsid(), gWifi.ip().toString());
 }
 }  // namespace
 
 void setup() {
-  Serial.begin(kSerialBaudRate);
-  delay(kBootDelayMs);
-  Serial.println();
-  Serial.println(String("GeekMagic Open Firmware ") + PROJECT_VER_STR);
+    Serial.begin(kSerialBaudRate);
+    delay(kBootDelayMs);
+    Serial.println();
+    Serial.println(String("GeekMagic Open Firmware ") + PROJECT_VER_STR);
 
-  DisplayManager::begin();
-  DisplayManager::showBoot();
+    DisplayManager::begin();
+    DisplayManager::showBoot();
 
-  if (!LittleFS.begin()) {
-    DisplayManager::showMessage("LittleFS error", "Mount failed");
-    return;
-  }
+    if (!LittleFS.begin()) {
+        DisplayManager::showMessage("LittleFS error", "Mount failed");
+        return;
+    }
 
-  if (!gConfig.load()) {
-    DisplayManager::showMessage("Config", "Using defaults");
-  }
+    if (!gConfig.load()) {
+        DisplayManager::showMessage("Config", "Using defaults");
+    }
 
-  gWifi.begin(gConfig.wifiSsid(), gConfig.wifiPassword());
+    gWifi.begin(gConfig.wifiSsid(), gConfig.wifiPassword());
 
-  registerRoutes(gWebServer, gConfig, gWifi, gOta);
-  gOta.attachLegacy(gWebServer, kLegacyOtaPath);
+    registerRoutes(gWebServer, gConfig, gWifi, gOta);
+    gOta.attachLegacy(gWebServer, kLegacyOtaPath);
 
-  gWebServer.begin();
-  showCurrentNetworkOnDisplay();
+    gWebServer.begin();
+    showCurrentNetworkOnDisplay();
 
-  EspClass::wdtEnable(WDTO_2S);
+    EspClass::wdtEnable(WDTO_2S);
 }
 
 void loop() {
-  gWebServer.handleClient();
-  gWifi.processDns();
-  gWifi.update();
-  gOta.loop();
+    gWebServer.handleClient();
+    gWifi.processDns();
+    gWifi.update();
+    gOta.loop();
 
-  static bool wasApMode = false;
-  const bool apMode = gWifi.isApMode();
-  if (apMode != wasApMode) {
-    wasApMode = apMode;
-    showCurrentNetworkOnDisplay();
-  }
+    static bool wasApMode = false;
+    const bool apMode = gWifi.isApMode();
+    if (apMode != wasApMode) {
+        wasApMode = apMode;
+        showCurrentNetworkOnDisplay();
+    }
 
-  EspClass::wdtFeed();
-  delay(2);
+    EspClass::wdtFeed();
+    delay(2);
 }
