@@ -31,6 +31,7 @@
 #include "web/Webserver.h"
 #include "web/Api.h"
 #include "ntp/NTPClient.h"
+#include "gpio/TapManager.h"
 #include <array>
 
 ConfigManager configManager;
@@ -52,6 +53,8 @@ static constexpr int LOADING_DELAY_MS = 1000;
 
 Webserver* webserver = nullptr;
 NTPClient* ntpClient = nullptr;
+
+TapManager tapper = TapManager(10);
 
 /**
  * @brief Formats bytes into a human-readable string
@@ -160,6 +163,10 @@ void setup() {
 
     DisplayManager::drawStartup(wifiManager->getIP().toString());
 
+    tapper.begin();
+
+    tapper.onTapChange([](bool isTapped) { DisplayManager::showTapFeedback(isTapped); });
+
     // enable watchdog before going to loop()
     // 2 seconds should be way more than the main loop needs to do stuff
     EspClass::wdtEnable(WDTO_2S);
@@ -193,6 +200,8 @@ void loop() {
         snprintf(msgBuf, sizeof(msgBuf), "Free heap: %s (initial: %s)", freeBuf, initBuf);
         Logger::info(msgBuf);
     }
+
+    tapper.nextTick();
 
     EspClass::wdtFeed();  // kick watchdog
 }

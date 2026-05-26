@@ -702,3 +702,10 @@ auto DisplayManager::update() -> void { s_gif.update(); }
  * @return void
  */
 auto DisplayManager::clearScreen() -> void { g_lcd.fillScreen(LCD_BLACK); }
+
+auto DisplayManager::showTapFeedback(bool isTapped) -> void {
+    // show orange bar at bottom of screen when tapped, grey when not tapped
+    const uint16_t color = isTapped ? LCD_ORANGE : LCD_DARKGREY;
+    const int16_t barHeight = 20;
+    g_lcd.fillRect(0, LCD_H - barHeight, LCD_W, barHeight, color);
+}

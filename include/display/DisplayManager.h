@@ -28,6 +28,8 @@ static constexpr uint16_t LCD_WHITE = 0xFFFF;
 static constexpr uint16_t LCD_RED = 0xF800;
 static constexpr uint16_t LCD_GREEN = 0x07E0;
 static constexpr uint16_t LCD_BLUE = 0x001F;
+static constexpr uint16_t LCD_ORANGE = 0xFD20;
+static constexpr uint16_t LCD_DARKGREY = 0x39E7;
 
 static constexpr int ONE_LINE_SPACE = 20;
 static constexpr int TWO_LINES_SPACE = 40;
@@ -46,4 +48,6 @@ class DisplayManager {
     static bool stopGif();
     static void update();
     static void clearScreen();
+
+    static void showTapFeedback(bool isTapped);
 };

@@ -59,7 +59,7 @@ class ConfigManager {
     std::string api_token;
     std::string filename;
     SecureStorage secure;
-    uint8_t lcd_rotation = 4;
+    uint8_t lcd_rotation = 0;
     std::string ntp_server;
 
     const char* getNtpServer() const { return ntp_server.c_str(); }
